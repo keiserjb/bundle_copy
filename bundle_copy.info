@@ -1,0 +1,6 @@
+name="Bundle copy"
+description="Import and exports bundles through the UI."
+core=7.x
+dependencies[] = ctools
+package="Fields"
+files[] = bundle_copy.module

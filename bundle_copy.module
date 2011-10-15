@@ -1,0 +1,286 @@
+<?php
+
+/**
+ * @file
+ * Bundle copy.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function bundle_copy_menu() {
+  $items = array();
+
+  // At this point, only node bundles are supported.
+  // Let's check if we need to come up with some hook
+  // for contrib modules or a key in entity_info to
+  // check if they have bundle copy support by default or not.
+
+  $items['admin/structure/types/export'] = array(
+    'title' => 'Export',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('bundle_copy_export', 'node'),
+    'access arguments' => array('administer content types'),
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  $items['admin/structure/types/import'] = array(
+    'title' => 'Import',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('bundle_copy_import', 'node'),
+    'access arguments' => array('administer content types'),
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  return $items;
+}
+
+/**
+ * Menu callback: present the export page.
+ */
+function bundle_copy_export($form, &$form_state, $entity_type = 'node') {
+
+
+  if (isset($form_state['step'])) {
+    $step = $form_state['step'];
+  }
+  else {
+    $step = 1;
+    $form_state['step'] = $step;
+  }
+
+  switch ($step) {
+
+    // Select the bundles.
+    case 1:
+      $bundles = _bundle_copy_bundle_info($entity_type);
+      $form['bundles'] = array(
+        '#type' => 'checkboxes',
+        '#title' => t('Select bundles'),
+        '#options' => $bundles,
+        '#required' => TRUE,
+      );
+
+      $form['next'] = array(
+        '#type' => 'submit',
+        '#value' => t('Next'),
+      );
+      break;
+
+    // List the fields
+    case 2:
+
+      $fields = $instances = array();
+      $selected_bundles = $form_state['page_values'][1]['bundles'];
+      foreach ($selected_bundles as $key => $bundle) {
+        if ($key === $bundle) {
+          $instances += field_info_instances($entity_type, $bundle);
+        }
+      }
+
+      foreach ($instances as $key => $info) {
+        $fields[$key] = $info['label'];
+      }
+
+      $form['fields'] = array(
+        '#type' => 'checkboxes',
+        '#title' => t('Select fields'),
+        '#options' => $fields,
+      );
+
+      $form['actions'] = array('#type' => 'actions');
+      $form['actions']['next'] = array(
+        '#type' => 'submit',
+        '#value' => t('Export'),
+      );
+      $form['actions']['cancel'] = array(
+        '#markup' => l(t('Cancel'), 'admin/structure/types/export'),
+      );
+
+      break;
+
+    // Export data.
+    case 3:
+
+      $selected_bundles = $form_state['page_values'][1]['bundles'];
+      $selected_fields = $form_state['page_values'][2]['fields'];
+      $data = _bundle_copy_export_data($entity_type, $selected_bundles, $selected_fields);
+
+      $form['export'] = array(
+				'#title' => t('Export data'),
+				'#type' => 'textarea',
+				'#cols' => 60,
+				'#value' => $data,
+				'#rows' => 40,
+				'#description' => t('Copy the export text and paste it into another bundle using the import function.'),
+      );
+      break;
+  }
+
+  return $form;
+}
+
+/**
+ * Submit callback: export data.
+ */
+function bundle_copy_export_submit($form, &$form_state) {
+
+  // Save the form state values.
+  $step = $form_state['step'];
+  $form_state['page_values'][$step] = $form_state['values'];
+
+  // Add step and rebuild.
+  $form_state['step'] = $form_state['step'] + 1;
+  $form_state['rebuild'] = TRUE;
+}
+
+/**
+ * Menu callback: present the import page.
+ */
+function bundle_copy_import($form, $form_state, $entity_type = 'node') {
+
+  $form['entity_type'] = array('#type' => 'value', '#value' => $entity_type);
+
+  $form['info'] = array(
+    '#markup' => t('This form will import field definitions exported from another bundle or another database.<br/>Note that fields cannot be duplicated within the same content type, so imported fields will be added only if they do not already exist in the selected type.')
+  );
+
+  $form['type_name'] = array(
+    '#title' => t('Bundle'),
+    '#description' => t('Select the bundle to import these fields into.<br/>Select &lt;Create&gt; to create a new bundle to contain the fields.'),
+    '#type' => 'select',
+    '#options' => array('<create>' => t('<Create>')) + _bundle_copy_bundle_info($entity_type),
+  );
+
+  $form['macro'] = array(
+    '#type' => 'textarea',
+    '#rows' => 10,
+    '#title' => t('Import data'),
+    '#required' => TRUE,
+    '#description' => t('Paste the text created by a bundle export into this field.'),
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Import'),
+  );
+
+  return $form;
+}
+
+/**
+ * Submit callback: import data.
+ */
+function bundle_copy_import_submit($form, &$form_state) {
+
+  $message = '';
+
+  // Evaluate data.
+  eval($form_state['values']['macro']);
+
+  if (isset($data) && is_array($data)) {
+
+    $existing_fields = field_info_fields();
+
+    // @todo needs a lot more validation :)
+    // Check if all needed modules are enabled
+    // Import content type
+    // Check if field instance doesn't exist yet
+    if (isset($data['fields'])) {
+      foreach ($data['fields'] as $key => $info) {
+        if (isset($data['instances'][$key])) {
+
+          if (!isset($existing_fields[$key])) {
+            field_create_field($info);
+          }
+          else {
+            field_update_field($info);
+          }
+
+          foreach ($data['instances'][$key] as $ikey => $iinfo) {
+            field_create_instance($iinfo);
+            drupal_set_message(t('!field_name has been created for !bundle.', array('!field_name' => $key)));
+          }
+        }
+      }
+    }
+
+    // Clear entity and fields cache.
+    field_info_cache_clear();
+  }
+  else {
+    drupal_set_message(t('No data has been imported'));
+  }
+}
+
+/**
+ * Return bundles for a certain entity type.
+ *
+ * @param $entity_type
+ *   The name of the entity type.
+ */
+function _bundle_copy_bundle_info($entity_type) {
+  $bundles = array();
+  $entity_info = entity_get_info($entity_type);
+  foreach ($entity_info['bundles'] as $key => $info) {
+    $bundles[$key] = $info['label'];
+  }
+  return $bundles;
+}
+
+/**
+ * Creates export data
+ *
+ * @param $entity_type
+ *   The name of the entity_type
+ * @param $selected_bundles
+ *   The selected bundles
+ * @param $selected_fields
+ *   The selected fields
+ */
+function _bundle_copy_export_data($entity_type, $selected_bundles, $selected_fields) {
+
+  ctools_include('export');
+
+  $data = array();
+  foreach ($selected_bundles as $bkey => $binfo) {
+
+    if ($bkey !== $binfo) {
+      continue;
+    }
+
+    foreach ($selected_fields as $fkey => $finfo) {
+      if ($fkey === $finfo) {
+
+        if (!isset($data['fields'][$fkey])) {
+          // Field info.
+          $field_info = db_select('field_config', 'fc')
+            ->fields('fc')
+            ->condition('field_name', $fkey)
+            ->execute()
+            ->fetchAssoc();
+
+          unset($field_info['id']);
+          $field_info['data'] = unserialize($field_info['data']);
+          $data['fields'][$fkey] = $field_info;
+        }
+
+        // Instance.
+        $field_instance = db_select('field_config_instance', 'fci')
+          ->fields('fci')
+          ->condition('field_name', $fkey)
+          ->condition('entity_type', $entity_type)
+          ->condition('bundle', $bkey)
+          ->execute()
+          ->fetchAssoc();
+
+        unset($field_instance['field_id']);
+        $field_instance['data'] = unserialize($field_instance['data']);
+        $data['instances'][$fkey][] = $field_instance;
+
+      }
+    }
+  }
+
+  return '$data = ' . ctools_var_export($data, '  ') . ';';
+}
