@@ -102,6 +102,9 @@ function bundle_copy_export($form, &$form_state, $entity_type = 'node') {
         if (isset($all_groups[$entity_type])) {
           foreach ($selected_bundles as $key => $bundle) {
             if ($key === $bundle) {
+              if (!isset($all_groups[$entity_type][$key])) {
+                continue;
+              }
               foreach ($all_groups[$entity_type][$key] as $view_mode => $groups) {
                 foreach ($groups as $field_group) {
                   $group_options[$field_group->id]['fieldgroup'] = $field_group->label;
@@ -290,12 +293,13 @@ function bundle_copy_import_submit($form, &$form_state) {
             $fieldgroup->id = $existing->id;
             ctools_export_crud_save('field_group', $fieldgroup);
             ctools_export_crud_set_status('field_group', $fieldgroup, $fieldgroup->disabled);
-            drupal_set_message(t('%fieldgroup fieldgroup has been updated for @bundle in @entity_type', array('%fieldgroup' => $fieldgroup->label, '@bundle' => $fieldgroup->bundle, '@entity_type' => $fieldgroup->entity_type)));
+            drupal_set_message(t('%fieldgroup fieldgroup has been updated for @bundle in @entity_type.', array('%fieldgroup' => $fieldgroup->label, '@bundle' => $fieldgroup->bundle, '@entity_type' => $fieldgroup->entity_type)));
           }
           else {
             unset($fieldgroup->id);
             unset($fieldgroup->export_type);
             ctools_export_crud_save('field_group', $fieldgroup);
+            $fieldgroup->export_type = 1;
             ctools_export_crud_set_status('field_group', $fieldgroup, $fieldgroup->disabled);
             drupal_set_message(t('%fieldgroup fieldgroup has been saved for @bundle in @entity_type.', array('%fieldgroup' => $fieldgroup->label, '@bundle' => $fieldgroup->bundle, '@entity_type' => $fieldgroup->entity_type)));
           }
