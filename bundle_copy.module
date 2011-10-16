@@ -6,26 +6,62 @@
  */
 
 /**
+ * Api function to get the bundle copy info.
+ */
+function bundle_copy_get_info() {
+  static $info = FALSE;
+
+  if (!$info) {
+    return module_invoke_all('bundle_copy_info');
+  }
+
+  return $info;
+}
+
+/**
+ * Implements hook_bundle_copy_info().
+ */
+function bundle_copy_bundle_copy_info() {
+  return array(
+    'node' => array(
+      'bundle_export_callback' => 'node_type_get_type',
+      'bundle_save_callback' => 'node_type_save',
+      'export_menu' => array(
+        'path' => 'admin/structure/types/export',
+        'access arguments' => 'administer content types',
+      ),
+      'import_menu' => array(
+        'path' => 'admin/structure/types/import',
+        'access arguments' => 'administer content types',
+      ),
+    ),
+  );
+}
+
+/**
  * Implements hook_menu().
  */
 function bundle_copy_menu() {
   $items = array();
 
-  $items['admin/structure/types/export'] = array(
-    'title' => 'Export',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('bundle_copy_export', 'node'),
-    'access arguments' => array('administer content types'),
-    'type' => MENU_LOCAL_TASK,
-  );
+  $bc_info = bundle_copy_get_info();
 
-  $items['admin/structure/types/import'] = array(
-    'title' => 'Import',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('bundle_copy_import', 'node'),
-    'access arguments' => array('administer content types'),
-    'type' => MENU_LOCAL_TASK,
-  );
+  foreach ($bc_info as $entity_type => $info) {
+    $items[$info['export_menu']['path']] = array(
+      'title' => 'Export',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('bundle_copy_export', $entity_type),
+      'access arguments' => array($info['export_menu']['access arguments']),
+      'type' => MENU_LOCAL_TASK
+    );
+    $items[$info['import_menu']['path']] = array(
+      'title' => 'Import',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('bundle_copy_import', $entity_type),
+      'access arguments' => array($info['import_menu']['access arguments']),
+      'type' => MENU_LOCAL_TASK
+    );
+  }
 
   return $items;
 }
@@ -96,7 +132,7 @@ function bundle_copy_export($form, &$form_state, $entity_type = 'node') {
         '#empty' => t('No fields found.'),
       );
 
-      // Field group support - currently only form.
+      // Field group support.
       if (!empty($all_groups)) {
         $group_options = $fieldgroups = array();
         if (isset($all_groups[$entity_type])) {
@@ -219,17 +255,28 @@ function bundle_copy_import_submit($form, &$form_state) {
   if (isset($data) && is_array($data)) {
 
     $modules = module_list();
-    $existing_bundles = _bundle_copy_bundle_info('node');
+    $bc_info = bundle_copy_get_info();
 
-    // Create content types.
+    // Create bundles.
     foreach ($data['bundles'] as $key => $bundle) {
-      if (!isset($existing_bundles[$key])) {
-        drupal_set_message(t('%bundle bundle has been created.', array('%bundle' => $bundle->name)));
+      $entity_type = '';
+      if (is_object($bundle)) {
+        $entity_type = $bundle->bc_entity_type;
       }
-      else {
-        drupal_set_message(t('%bundle bundle has been updated.', array('%bundle' => $bundle->name)));
+      elseif (is_array($bundle)) {
+        $entity_type = $bundle['bc_entity_type'];
       }
-      node_type_save($bundle);
+      if (!empty($entity_type)) {
+        $existing_bundles = _bundle_copy_bundle_info($entity_type);
+        $bundle_save_callback = $bc_info[$entity_type]['bundle_save_callback'];
+        $bundle_info = $bundle_save_callback($bundle);
+        if (!isset($existing_bundles[$key])) {
+          drupal_set_message(t('%bundle bundle has been created.', array('%bundle' => $bundle->name)));
+        }
+        else {
+          drupal_set_message(t('%bundle bundle has been updated.', array('%bundle' => $bundle->name)));
+        }
+      }
     }
 
     // Create or update fields and their instances
@@ -281,7 +328,6 @@ function bundle_copy_import_submit($form, &$form_state) {
       }
     }
 
-
     // Create / update fieldgroups.
     if (isset($data['fieldgroups'])) {
       if (module_exists('field_group')) {
@@ -330,17 +376,22 @@ function bundle_copy_import_submit($form, &$form_state) {
  *   Whether we're returning for the table select or not.
  */
 function _bundle_copy_bundle_info($entity_type, $table_select = FALSE) {
-  $bundles = array();
-  $entity_info = entity_get_info($entity_type);
-  foreach ($entity_info['bundles'] as $key => $info) {
-    if ($table_select) {
-      $bundles[$key]['label'] = $info['label'];
-    }
-    else {
-      $bundles[$key] = $info['label'];
+  static $bundles = array();
+
+  if (!isset($bundles[$entity_type])) {
+    $bundles[$entity_type] = array();
+    $entity_info = entity_get_info($entity_type);
+    foreach ($entity_info['bundles'] as $key => $info) {
+      if ($table_select) {
+        $bundles[$entity_type][$key]['label'] = $info['label'];
+      }
+      else {
+        $bundles[$entity_type][$key] = $info['label'];
+      }
     }
   }
-  return $bundles;
+
+  return $bundles[$entity_type];
 }
 
 /**
@@ -355,6 +406,7 @@ function _bundle_copy_export_data($entity_type, $selected_data) {
 
   ctools_include('export');
 
+  $bc_info = bundle_copy_get_info();
   $selected_bundles = $selected_data[1]['bundles'];
   $selected_fields = $selected_data[2]['fields'];
   $selected_fieldgroups = isset($selected_data[2]['fieldgroups']) ? $selected_data[2]['fieldgroups'] : array();
@@ -371,8 +423,15 @@ function _bundle_copy_export_data($entity_type, $selected_data) {
     }
 
     // Bundles export data.
-    $node_info = node_type_get_type($bkey);
-    $data['bundles'][$bkey] = $node_info;
+    $bundle_info_callback = $bc_info[$entity_type]['bundle_export_callback'];
+    $bundle_info = $bundle_info_callback($bkey);
+    if (is_object($bundle_info)) {
+      $bundle_info->bc_entity_type = $entity_type;
+    }
+    elseif (is_array($bundle_info)) {
+      $bundle_info->bc_entity_type = $entity_type;
+    }
+    $data['bundles'][$bkey] = $bundle_info;
 
     // Fields export data.
     foreach ($selected_fields as $fkey => $finfo) {
