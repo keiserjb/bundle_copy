@@ -182,12 +182,12 @@ function bundle_copy_import($form, $form_state, $entity_type = 'node') {
     '#markup' => t('This form will import bundle and field definitions.'),
   );
 
-  /*$form['type_name'] = array(
-    '#title' => t('Bundle'),
-    '#description' => t('Select the bundle to import these fields into.<br/>Select &lt;Create&gt; to create a new bundle to contain the fields.'),
-    '#type' => 'select',
-    '#options' => array('<create>' => t('<Create>')) + _bundle_copy_bundle_info($entity_type),
-  );*/
+  //$form['type_name'] = array(
+  //  '#title' => t('Bundle'),
+  //  '#description' => t('Select the bundle to import these fields into.<br/>Select &lt;Create&gt; to create a new bundle to contain the fields.'),
+  //  '#type' => 'select',
+  //  '#options' => array('<create>' => t('<Create>')) + _bundle_copy_bundle_info($entity_type),
+  //);
 
   $form['macro'] = array(
     '#type' => 'textarea',
@@ -280,27 +280,30 @@ function bundle_copy_import_submit($form, &$form_state) {
 
 
     // Create / update fieldgroups.
-    if (isset($data['fieldgroups']) && module_exists('field_group')) {
-      ctools_include('export');
-      $existing_field_groups = field_group_info_groups();
-      foreach ($data['fieldgroups'] as $identifier => $fieldgroup) {
-        // @todo for some freaking reason, the update triggers a segfault on my machine
-        // so let's delete first :/
-        /*if (isset($existing_field_groups[$fieldgroup->entity_type][$fieldgroup->bundle][$fieldgroup->mode][$fieldgroup->identifier])) {
-          drupal_set_message(t('!fieldgroup field group has been updated for !bundle in !entity_type', array('!fieldgroup' => $fieldgroup->label, '!bundle' => $fieldgroup->bundle, '!entity_type' => $fieldgroup->entity_type)));
+    if (isset($data['fieldgroups'])) {
+      if (module_exists('field_group')) {
+        ctools_include('export');
+        $existing_field_groups = field_group_info_groups();
+        foreach ($data['fieldgroups'] as $identifier => $fieldgroup) {
+          if (isset($existing_field_groups[$fieldgroup->entity_type][$fieldgroup->bundle][$fieldgroup->mode][$fieldgroup->group_name])) {
+            $existing = $existing_field_groups[$fieldgroup->entity_type][$fieldgroup->bundle][$fieldgroup->mode][$fieldgroup->group_name];
+            $fieldgroup->id = $existing->id;
+            ctools_export_crud_save('field_group', $fieldgroup);
+            ctools_export_crud_set_status('field_group', $fieldgroup, $fieldgroup->disabled);
+            drupal_set_message(t('%fieldgroup fieldgroup has been updated for @bundle in @entity_type', array('%fieldgroup' => $fieldgroup->label, '@bundle' => $fieldgroup->bundle, '@entity_type' => $fieldgroup->entity_type)));
+          }
+          else {
+            unset($fieldgroup->id);
+            unset($fieldgroup->export_type);
+            ctools_export_crud_save('field_group', $fieldgroup);
+            ctools_export_crud_set_status('field_group', $fieldgroup, $fieldgroup->disabled);
+            drupal_set_message(t('%fieldgroup fieldgroup has been saved for @bundle in @entity_type.', array('%fieldgroup' => $fieldgroup->label, '@bundle' => $fieldgroup->bundle, '@entity_type' => $fieldgroup->entity_type)));
+          }
         }
-        else {*/
-          unset($fieldgroup->id);
-          unset($fieldgroup->export_type);
-          field_group_group_export_delete($fieldgroup);
-          drupal_set_message(t('%fieldgroup field group has been saved for @bundle in @entity_type.', array('%fieldgroup' => $fieldgroup->label, '@bundle' => $fieldgroup->bundle, '@entity_type' => $fieldgroup->entity_type)));
-        //}
-          field_group_pack($fieldgroup);
-          drupal_write_record('field_group', $fieldgroup);
-        }
-    }
-    else {
-      drupal_set_message(t('The field groups could not be saved because the <em>Field group</em> module is disabled or missing.'));
+      }
+      else {
+        drupal_set_message(t('The fieldgroups could not be saved because the <em>Field group</em> module is disabled or missing.'), 'error');
+      }
     }
 
     // Clear caches.
@@ -310,7 +313,7 @@ function bundle_copy_import_submit($form, &$form_state) {
     }
   }
   else {
-    drupal_set_message(t('No data has been imported'));
+    drupal_set_message(t('The pasted text did not contain any valid export data.'), 'error');
   }
 }
 
