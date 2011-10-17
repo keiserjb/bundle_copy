@@ -23,6 +23,7 @@ function bundle_copy_get_info() {
  */
 function bundle_copy_bundle_copy_info() {
   $info = array();
+  
   $info['node'] = array(
     'bundle_export_callback' => 'node_type_get_type',
     'bundle_save_callback' => 'node_type_save',
@@ -35,8 +36,20 @@ function bundle_copy_bundle_copy_info() {
       'access arguments' => 'administer content types',
     ),
   );
+
+  $info['user'] = array(
+    'bundle_export_callback' => '_bc_bundle_export_ignore',
+    'bundle_save_callback' => '_bc_bundle_save_ignore',
+    'export_menu' => array(
+      'path' => 'admin/config/people/accounts/export',
+      'access arguments' => 'administer users',
+    ),
+    'import_menu' => array(
+      'path' => 'admin/config/people/accounts/import',
+      'access arguments' => 'administer users',
+    ),
+  );
   
-  // Taxonomy bundles.
   if (module_exists('taxonomy')) {
     $info['taxonomy_term'] = array(
       'bundle_export_callback' => '_bc_copy_taxonomy_load',
@@ -188,8 +201,10 @@ function bundle_copy_export($form, &$form_state, $entity_type = 'node') {
         '#type' => 'submit',
         '#value' => t('Export'),
       );
+      
+      $bc_info = bundle_copy_get_info();      
       $form['actions']['cancel'] = array(
-        '#markup' => l(t('Cancel'), 'admin/structure/types/export'),
+        '#markup' => l(t('Cancel'), $bc_info[$entity_type]['export_menu']['path']),
       );
 
       break;
@@ -498,4 +513,18 @@ function _bc_copy_taxonomy_save($bundle) {
     $bundle->vid = $vid;
   }
   taxonomy_vocabulary_save($bundle);
+}
+
+/**
+ * Helper function to ignore a bundle on export.
+ */
+function _bc_bundle_export_ignore($name) {
+  
+}
+
+/**
+ * Helper function to ignore a bundle save.
+ */
+function _bc_bundle_save_ignore($bundle) {
+  
 }
