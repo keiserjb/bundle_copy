@@ -22,20 +22,37 @@ function bundle_copy_get_info() {
  * Implements hook_bundle_copy_info().
  */
 function bundle_copy_bundle_copy_info() {
-  return array(
-    'node' => array(
-      'bundle_export_callback' => 'node_type_get_type',
-      'bundle_save_callback' => 'node_type_save',
-      'export_menu' => array(
-        'path' => 'admin/structure/types/export',
-        'access arguments' => 'administer content types',
-      ),
-      'import_menu' => array(
-        'path' => 'admin/structure/types/import',
-        'access arguments' => 'administer content types',
-      ),
+  $info = array();
+  $info['node'] = array(
+    'bundle_export_callback' => 'node_type_get_type',
+    'bundle_save_callback' => 'node_type_save',
+    'export_menu' => array(
+      'path' => 'admin/structure/types/export',
+      'access arguments' => 'administer content types',
+    ),
+    'import_menu' => array(
+      'path' => 'admin/structure/types/import',
+      'access arguments' => 'administer content types',
     ),
   );
+  
+  // Taxonomy bundles.
+  if (module_exists('taxonomy')) {
+    $info['taxonomy_term'] = array(
+      'bundle_export_callback' => '_bc_copy_taxonomy_load',
+      'bundle_save_callback' => '_bc_copy_taxonomy_save',
+      'export_menu' => array(
+        'path' => 'admin/structure/taxonomy/export',
+        'access arguments' => 'administer taxonomy',
+      ),
+      'import_menu' => array(
+        'path' => 'admin/structure/taxonomy/import',
+        'access arguments' => 'administer taxonomy',
+      ),
+    );
+  }
+  
+  return $info;
 }
 
 /**
@@ -458,4 +475,27 @@ function _bundle_copy_export_data($entity_type, $selected_data) {
   }
 
   return '$data = ' . ctools_var_export($data) . ';';
+}
+
+/**
+ * Helper function to load the taxonomy, but remove the vid on the object.
+ * 
+ * @param $name
+ *   The name of the bundle.
+ */
+function _bc_copy_taxonomy_load($name) {
+  $bundle = taxonomy_vocabulary_machine_name_load($name);
+  unset($bundle->vid);
+  return $bundle;  
+}
+
+/**
+ * Helper function to save the taxonomy.
+ */
+function _bc_copy_taxonomy_save($bundle) {
+  $vid = db_query('SELECT vid FROM {taxonomy_vocabulary} WHERE machine_name = :machine_name', array(':machine_name' => $bundle->machine_name))->fetchField();
+  if ($vid) {
+    $bundle->vid = $vid;
+  }
+  taxonomy_vocabulary_save($bundle);
 }
