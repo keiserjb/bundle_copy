@@ -173,7 +173,7 @@ function bundle_copy_export($form, &$form_state, $entity_type = 'node') {
               }
               foreach ($all_groups[$entity_type][$key] as $view_mode => $groups) {
                 foreach ($groups as $field_group) {
-                  $group_options[$field_group->id]['fieldgroup'] = $field_group->label;
+                  $group_options[$field_group->id]['fieldgroup'] = $field_group->label . ' (' . $field_group->bundle . ' - ' . $field_group->mode .')';
                   $fieldgroups[$field_group->id] = $field_group;
                 }
               }
@@ -414,11 +414,12 @@ function _bundle_copy_bundle_info($entity_type, $table_select = FALSE) {
     $bundles[$entity_type] = array();
     $entity_info = entity_get_info($entity_type);
     foreach ($entity_info['bundles'] as $key => $info) {
+      $label = isset($info['label']) ? $info['label'] : drupal_ucfirst(str_replace('_', ' ', $key));
       if ($table_select) {
-        $bundles[$entity_type][$key]['label'] = $info['label'];
+        $bundles[$entity_type][$key]['label'] = $label;
       }
       else {
-        $bundles[$entity_type][$key] = $info['label'];
+        $bundles[$entity_type][$key] = $label;
       }
     }
   }

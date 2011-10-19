@@ -19,7 +19,7 @@
 function hook_bundle_copy_info() {
   return array(
     'node' => array(
-      'bundle_export_callback' => 'node_type_get_type'
+      'bundle_export_callback' => 'node_type_get_type',
       'bundle_save_callback' => 'node_type_save',
       'export_menu' => array(
         'path' => 'admin/structure/types/export',
