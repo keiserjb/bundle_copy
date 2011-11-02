@@ -23,7 +23,7 @@ function bundle_copy_get_info() {
  */
 function bundle_copy_bundle_copy_info() {
   $info = array();
-  
+
   $info['node'] = array(
     'bundle_export_callback' => 'node_type_get_type',
     'bundle_save_callback' => 'node_type_save',
@@ -49,7 +49,7 @@ function bundle_copy_bundle_copy_info() {
       'access arguments' => 'administer users',
     ),
   );
-  
+
   if (module_exists('taxonomy')) {
     $info['taxonomy_term'] = array(
       'bundle_export_callback' => '_bc_copy_taxonomy_load',
@@ -64,7 +64,7 @@ function bundle_copy_bundle_copy_info() {
       ),
     );
   }
-  
+
   return $info;
 }
 
@@ -147,9 +147,11 @@ function bundle_copy_export($form, &$form_state, $entity_type = 'node') {
           $instances += field_info_instances($entity_type, $bundle);
         }
       }
+      ksort($instances);
 
       foreach ($instances as $key => $info) {
-        $field_options[$key]['field'] = $info['label'];
+        $field_options[$key]['field'] = $info['field_name']; // Same as $key.
+        $field_options[$key]['label'] = $info['label'];
       }
 
       $form['fields-info'] = array(
@@ -157,7 +159,7 @@ function bundle_copy_export($form, &$form_state, $entity_type = 'node') {
       );
       $form['fields'] = array(
         '#type' => 'tableselect',
-        '#header' => array('field' => t('Field name')),
+        '#header' => array('field' => t('Field name'), 'label' => t('Label')),
         '#options' => $field_options,
         '#empty' => t('No fields found.'),
       );
@@ -201,8 +203,8 @@ function bundle_copy_export($form, &$form_state, $entity_type = 'node') {
         '#type' => 'submit',
         '#value' => t('Export'),
       );
-      
-      $bc_info = bundle_copy_get_info();      
+
+      $bc_info = bundle_copy_get_info();
       $form['actions']['cancel'] = array(
         '#markup' => l(t('Cancel'), $bc_info[$entity_type]['export_menu']['path']),
       );
@@ -413,7 +415,9 @@ function _bundle_copy_bundle_info($entity_type, $table_select = FALSE) {
   if (!isset($bundles[$entity_type])) {
     $bundles[$entity_type] = array();
     $entity_info = entity_get_info($entity_type);
-    foreach ($entity_info['bundles'] as $key => $info) {
+    $entity_bundles = $entity_info['bundles'];
+    ksort($entity_bundles);
+    foreach ($entity_bundles as $key => $info) {
       $label = isset($info['label']) ? $info['label'] : drupal_ucfirst(str_replace('_', ' ', $key));
       if ($table_select) {
         $bundles[$entity_type][$key]['label'] = $label;
@@ -445,15 +449,16 @@ function _bundle_copy_export_data($entity_type, $selected_data) {
   $selected_fieldgroups = isset($selected_data[2]['fieldgroups']) ? $selected_data[2]['fieldgroups'] : array();
   $full_fieldgroups = isset($selected_data[2]['fieldgroups-full']) ? $selected_data[2]['fieldgroups-full'] : array();
 
-  $data = array();
+  $data = $instances = array();
   $fields = field_info_fields();
   foreach ($selected_bundles as $bkey => $binfo) {
-
-    $field_instances = field_info_instances($entity_type, $bkey);
 
     if ($bkey !== $binfo) {
       continue;
     }
+
+    $field_instances = field_info_instances($entity_type, $bkey);
+    ksort($field_instances);
 
     // Bundles export data.
     $bundle_info_callback = $bc_info[$entity_type]['bundle_export_callback'];
@@ -475,11 +480,13 @@ function _bundle_copy_export_data($entity_type, $selected_data) {
         }
 
         if (isset($field_instances[$fkey])) {
-          $data['instances'][$fkey][] = $field_instances[$fkey];
+          $instances[$fkey][] = $field_instances[$fkey];
         }
       }
     }
   }
+  ksort($instances);
+  $data['instances'] = $instances;
 
   // Field group export data.
   if (!empty($selected_fieldgroups)) {
@@ -495,14 +502,16 @@ function _bundle_copy_export_data($entity_type, $selected_data) {
 
 /**
  * Helper function to load the taxonomy, but remove the vid on the object.
- * 
+ *
  * @param $name
  *   The name of the bundle.
  */
 function _bc_copy_taxonomy_load($name) {
   $bundle = taxonomy_vocabulary_machine_name_load($name);
-  unset($bundle->vid);
-  return $bundle;  
+  if (isset($bundle->vid)) {
+    unset($bundle->vid);
+  }
+  return $bundle;
 }
 
 /**
@@ -520,12 +529,12 @@ function _bc_copy_taxonomy_save($bundle) {
  * Helper function to ignore a bundle on export.
  */
 function _bc_bundle_export_ignore($name) {
-  
+
 }
 
 /**
  * Helper function to ignore a bundle save.
  */
 function _bc_bundle_save_ignore($bundle) {
-  
+
 }
