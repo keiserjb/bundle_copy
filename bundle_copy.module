@@ -508,9 +508,6 @@ function _bundle_copy_export_data($entity_type, $selected_data) {
  */
 function _bc_copy_taxonomy_load($name) {
   $bundle = taxonomy_vocabulary_machine_name_load($name);
-  if (isset($bundle->vid)) {
-    unset($bundle->vid);
-  }
   return $bundle;
 }
 
@@ -518,6 +515,9 @@ function _bc_copy_taxonomy_load($name) {
  * Helper function to save the taxonomy.
  */
 function _bc_copy_taxonomy_save($bundle) {
+  if ($bundle->vid) {
+    unset($bundle->vid);
+  }
   $vid = db_query('SELECT vid FROM {taxonomy_vocabulary} WHERE machine_name = :machine_name', array(':machine_name' => $bundle->machine_name))->fetchField();
   if ($vid) {
     $bundle->vid = $vid;
