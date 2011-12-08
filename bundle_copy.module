@@ -467,7 +467,7 @@ function _bundle_copy_export_data($entity_type, $selected_data) {
       $bundle_info->bc_entity_type = $entity_type;
     }
     elseif (is_array($bundle_info)) {
-      $bundle_info->bc_entity_type = $entity_type;
+      $bundle_info['bc_entity_type'] = $entity_type;
     }
     $data['bundles'][$bkey] = $bundle_info;
 
@@ -476,10 +476,13 @@ function _bundle_copy_export_data($entity_type, $selected_data) {
       if ($fkey === $finfo) {
 
         if (!isset($data['fields'][$fkey])) {
+          unset($fields[$fkey]['id']);
           $data['fields'][$fkey] = $fields[$fkey];
         }
 
         if (isset($field_instances[$fkey])) {
+          unset($field_instances[$fkey]['id']);
+          unset($field_instances[$fkey]['field_id']);
           $instances[$fkey][] = $field_instances[$fkey];
         }
       }
