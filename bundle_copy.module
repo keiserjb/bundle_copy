@@ -371,6 +371,9 @@ function bundle_copy_import_submit($form, &$form_state) {
           if (isset($existing_field_groups[$fieldgroup->entity_type][$fieldgroup->bundle][$fieldgroup->mode][$fieldgroup->group_name])) {
             $existing = $existing_field_groups[$fieldgroup->entity_type][$fieldgroup->bundle][$fieldgroup->mode][$fieldgroup->group_name];
             $fieldgroup->id = $existing->id;
+            if (!isset($fieldgroup->disabled)) {
+              $fieldgroup->disabled = FALSE;
+            }
             ctools_export_crud_save('field_group', $fieldgroup);
             ctools_export_crud_set_status('field_group', $fieldgroup, $fieldgroup->disabled);
             drupal_set_message(t('%fieldgroup fieldgroup has been updated for @bundle in @entity_type.', array('%fieldgroup' => $fieldgroup->label, '@bundle' => $fieldgroup->bundle, '@entity_type' => $fieldgroup->entity_type)));
@@ -378,6 +381,9 @@ function bundle_copy_import_submit($form, &$form_state) {
           else {
             unset($fieldgroup->id);
             unset($fieldgroup->export_type);
+            if (!isset($fieldgroup->disabled)) {
+              $fieldgroup->disabled = FALSE;
+            }
             ctools_export_crud_save('field_group', $fieldgroup);
             $fieldgroup->export_type = 1;
             ctools_export_crud_set_status('field_group', $fieldgroup, $fieldgroup->disabled);
