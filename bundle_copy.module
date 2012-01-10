@@ -468,7 +468,7 @@ function _bundle_copy_export_data($entity_type, $selected_data) {
 
     // Bundles export data.
     $bundle_info_callback = $bc_info[$entity_type]['bundle_export_callback'];
-    $bundle_info = $bundle_info_callback($bkey);
+    $bundle_info = $bundle_info_callback($bkey, $entity_type);
     if (is_object($bundle_info)) {
       $bundle_info->bc_entity_type = $entity_type;
     }
