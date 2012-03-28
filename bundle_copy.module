@@ -88,12 +88,23 @@ function bundle_copy_menu() {
       'title' => 'Import',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('bundle_copy_import', $entity_type),
+      'access callback' => 'bundle_copy_import_access',
       'access arguments' => array($info['import_menu']['access arguments']),
       'type' => MENU_LOCAL_TASK
     );
   }
 
   return $items;
+}
+
+/**
+ * Bundle copy import access callback.
+ *
+ * Bundle copy imports require an additional access check because they are PHP
+ * code and PHP is more locked down than the general permission.
+ */
+function bundle_copy_import_access($permission) {
+  return user_access($permission) && user_access('use PHP for settings');
 }
 
 /**
