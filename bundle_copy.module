@@ -600,7 +600,7 @@ function bundle_copy_clone($form, &$form_state, $entity_type = 'node' , $bname_v
     '#machine_name' => array(
       'exists' => $bname_validate,
     ),
-    '#description' => t('A unique machine-readable name for this content type. It must only contain lowercase letters, numbers, and underscores. This name will be used for constructing the URL of the %node-add page, in which underscores will be converted into hyphens.', array('%node-add' => t('Add new content'))),
+    '#description' => t('A unique machine-readable name for this %btype. It must only contain lowercase letters, numbers, and underscores. This name will be used for constructing the URL of the %node-add page, in which underscores will be converted into hyphens.', array('%node-add' => t('Add new content'),'%btype' => ucfirst($entity_type))),
   );   
   $form['next'] = array(
     '#type' => 'submit',
