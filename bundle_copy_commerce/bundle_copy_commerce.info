@@ -1,0 +1,7 @@
+name="Bundle Copy Commerce"
+description="Import and exports Commerce fields through the UI."
+core=7.x
+dependencies[] = bundle_copy
+dependencies[] = commerce_product
+package="Fields"
+files[] = bundle_copy_commerce.module
