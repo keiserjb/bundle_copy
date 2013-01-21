@@ -516,6 +516,18 @@ function _bundle_copy_export_data($entity_type, $selected_data) {
           unset($field_instances[$fkey]['field_id']);
           $instances[$fkey][] = $field_instances[$fkey];
         }
+        
+        //Field Collection Export data
+        if ($fields[$fkey]['type'] == 'field_collection' && $fields[$fkey]['module'] == 'field_collection') {
+          $fc_fields = _bc_copy_field_collection_export($fields, $fields[$fkey]['field_name']);
+          foreach ($fc_fields as $fc_fkey => $fc_finfo) {
+            if (!isset($data['fields'][$fc_fkey])) {
+              unset($fields[$fc_fkey]['id']);
+              $data['fields'][$fc_fkey] = $fields[$fc_fkey];
+            }
+            $instances[$fc_fkey][] = $fc_finfo['instance'];
+          }
+        }
       }
     }
   }
@@ -532,6 +544,33 @@ function _bundle_copy_export_data($entity_type, $selected_data) {
   }
 
   return '$data = ' . ctools_var_export($data) . ';';
+}
+
+/**
+ * Helper function to load the fields of field collection field.
+ * Also it load recursively if field collection field exists inside a field collection.
+ *
+ * @param $fields
+ *   The info of all fields.
+ * @param $fcfield
+ *   The name of the field Collection field.
+ */
+function _bc_copy_field_collection_export($fields, $fcfield) {
+  
+  $fc_fields_data = array();
+  $fc_field_instances = field_info_instances('field_collection_item', $fcfield);
+  foreach ($fc_field_instances as $fc_fkey => $fc_finfo) {
+    
+    unset($fc_field_instances[$fc_fkey]['id']);
+    unset($fc_field_instances[$fc_fkey]['field_id']);
+    $fc_fields_data[$fc_fkey]['instance'] = $fc_field_instances[$fc_fkey];
+    if ($fields[$fc_fkey]['type'] == 'field_collection' && $fields[$fc_fkey]['module'] == 'field_collection') {
+      
+      $fc_fields_fc_fields_data = _bc_copy_field_collection_export($fields, $fields[$fc_fkey]['field_name']);
+      $fc_fields_data = array_merge($fc_fields_data, $fc_fields_fc_fields_data);
+    }
+  }
+  return $fc_fields_data;
 }
 
 /**
