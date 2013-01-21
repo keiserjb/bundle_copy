@@ -515,8 +515,7 @@ function _bundle_copy_export_data($entity_type, $selected_data) {
           unset($field_instances[$fkey]['id']);
           unset($field_instances[$fkey]['field_id']);
           $instances[$fkey][] = $field_instances[$fkey];
-        }
-        
+        }    
         //Field Collection Export data
         if ($fields[$fkey]['type'] == 'field_collection' && $fields[$fkey]['module'] == 'field_collection') {
           $fc_fields = _bc_copy_field_collection_export($fields, $fields[$fkey]['field_name']);
