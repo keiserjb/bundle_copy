@@ -203,8 +203,8 @@ function bundle_copy_export($form, &$form_state, $entity_type = 'node') {
               }
               foreach ($all_groups[$entity_type][$key] as $view_mode => $groups) {
                 foreach ($groups as $field_group) {
-                  $group_options[$field_group->id]['fieldgroup'] = $field_group->label . ' (' . $field_group->bundle . ' - ' . $field_group->mode . ')';
-                  $fieldgroups[$field_group->id] = $field_group;
+                  $group_options[$field_group->identifier]['fieldgroup'] = $field_group->label . ' (' . $field_group->bundle . ' - ' . $field_group->mode . ')';
+                  $fieldgroups[$field_group->identifier] = $field_group;
                 }
               }
             }
