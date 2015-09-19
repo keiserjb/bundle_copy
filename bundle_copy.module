@@ -38,8 +38,8 @@ function bundle_copy_bundle_copy_info() {
       'access arguments' => 'administer content types',
     ),
     'clone_menu' => array(
-        'path' => 'admin/structure/types/clone',
-        'access arguments' => 'administer content types',
+      'path' => 'admin/structure/types/clone',
+      'access arguments' => 'administer content types',
     ),
   );
 
@@ -54,7 +54,7 @@ function bundle_copy_bundle_copy_info() {
     'import_menu' => array(
       'path' => 'admin/config/people/accounts/import',
       'access arguments' => 'administer users',
-    ), 
+    ),
   );
 
   if (module_exists('taxonomy')) {
@@ -69,7 +69,7 @@ function bundle_copy_bundle_copy_info() {
       'import_menu' => array(
         'path' => 'admin/structure/taxonomy/import',
         'access arguments' => 'administer taxonomy',
-      ),   
+      ),
     );
   }
 
@@ -90,7 +90,7 @@ function bundle_copy_menu() {
       'page callback' => 'drupal_get_form',
       'page arguments' => array('bundle_copy_export', $entity_type),
       'access arguments' => array($info['export_menu']['access arguments']),
-      'type' => MENU_LOCAL_TASK
+      'type' => MENU_LOCAL_TASK,
     );
     $items[$info['import_menu']['path']] = array(
       'title' => 'Import',
@@ -98,7 +98,7 @@ function bundle_copy_menu() {
       'page arguments' => array('bundle_copy_import', $entity_type),
       'access callback' => 'bundle_copy_import_access',
       'access arguments' => array($info['import_menu']['access arguments']),
-      'type' => MENU_LOCAL_TASK
+      'type' => MENU_LOCAL_TASK,
     );
     if (isset($info['clone_menu']['path'])) {
       $bname_validate = $bc_info[$entity_type]['bundle_clone_name_validate'];
@@ -107,7 +107,7 @@ function bundle_copy_menu() {
         'page callback' => 'drupal_get_form',
         'page arguments' => array('bundle_copy_clone', $entity_type, $bname_validate),
         'access arguments' => array($info['clone_menu']['access arguments']),
-        'type' => MENU_LOCAL_TASK
+        'type' => MENU_LOCAL_TASK,
       );
     }
   }
@@ -128,7 +128,6 @@ function bundle_copy_import_access($permission) {
  * Menu callback: present the export page.
  */
 function bundle_copy_export($form, &$form_state, $entity_type = 'node') {
-
 
   if (isset($form_state['step'])) {
     $step = $form_state['step'];
@@ -178,7 +177,8 @@ function bundle_copy_export($form, &$form_state, $entity_type = 'node') {
       ksort($instances);
 
       foreach ($instances as $key => $info) {
-        $field_options[$key]['field'] = $info['field_name']; // Same as $key.
+        // Same as $key.
+        $field_options[$key]['field'] = $info['field_name'];
         $field_options[$key]['label'] = $info['label'];
       }
 
@@ -283,13 +283,12 @@ function bundle_copy_import($form, $form_state, $entity_type = 'node') {
     '#markup' => t('This form will import bundle and field definitions.'),
   );
 
-  //$form['type_name'] = array(
+  // $form['type_name'] = array(
   //  '#title' => t('Bundle'),
   //  '#description' => t('Select the bundle to import these fields into.<br/>Select &lt;Create&gt; to create a new bundle to contain the fields.'),
   //  '#type' => 'select',
   //  '#options' => array('<create>' => t('<Create>')) + _bundle_copy_bundle_info($entity_type),
-  //);
-
+  // );
   $form['macro'] = array(
     '#type' => 'textarea',
     '#rows' => 10,
@@ -322,6 +321,9 @@ function bundle_copy_import_submit($form, &$form_state) {
   }
 }
 
+/**
+ *
+ */
 function bundle_copy_import_process($data) {
   $modules = module_list();
   $bc_info = bundle_copy_get_info();
@@ -338,39 +340,43 @@ function bundle_copy_import_process($data) {
     if (!empty($entity_type)) {
       $existing_bundles = _bundle_copy_bundle_info($entity_type);
       $bundle_save_callback = $bc_info[$entity_type]['bundle_save_callback'];
-      //Validate a bundle name
+      // Validate a bundle name.
       $bundle_name_validate = $bc_info[$entity_type]['bundle_name_validate'];
       $bundle_name = $bundle->type ? $bundle->type : $bundle->machine_name;
       $content_name = $bundle->name;
       $is_type_exist = in_array($content_name, $existing_bundles);
-      $machine_name = preg_replace('@[^a-z0-9]+@','_', strtolower($bundle_name));
+      $machine_name = preg_replace('@[^a-z0-9]+@', '_', strtolower($bundle_name));
       if ($bundle_name === $machine_name) {
         if (!isset($existing_bundles[$bundle_name])) {
-            if ($is_type_exist) {
-                drupal_set_message(t('The human-readable name %bundle is already taken', array('%bundle' => $bundle->name)));
-                 return;
-            } else {
-                $bundle_info = $bundle_save_callback($bundle);
-                drupal_set_message(t('%bundle bundle has been created.', array('%bundle' => $bundle->name)));
-            }
-        } else {
-            $orignal_name = node_type_load($bundle_name);
-              if ($is_type_exist && $content_name != $orignal_name->name){
-                drupal_set_message(t('The human-readable name %bundle is already taken', array('%bundle' => $bundle->name)));
-                return;
-              } else {
-                $bundle_info = $bundle_save_callback($bundle);
-                drupal_set_message(t('%bundle bundle has been updated.', array('%bundle' => $bundle->name)));
-              }
+          if ($is_type_exist) {
+            drupal_set_message(t('The human-readable name %bundle is already taken', array('%bundle' => $bundle->name)));
+            return;
           }
-      } else {
+          else {
+            $bundle_info = $bundle_save_callback($bundle);
+            drupal_set_message(t('%bundle bundle has been created.', array('%bundle' => $bundle->name)));
+          }
+        }
+        else {
+          $orignal_name = node_type_load($bundle_name);
+          if ($is_type_exist && $content_name != $orignal_name->name) {
+            drupal_set_message(t('The human-readable name %bundle is already taken', array('%bundle' => $bundle->name)));
+            return;
+          }
+          else {
+            $bundle_info = $bundle_save_callback($bundle);
+            drupal_set_message(t('%bundle bundle has been updated.', array('%bundle' => $bundle->name)));
+          }
+        }
+      }
+      else {
         drupal_set_message('The machine-readable name must contain only lowercase letters, numbers, and underscores.');
         return;
       }
     }
   }
 
-  // Create or update fields and their instances
+  // Create or update fields and their instances.
   if (isset($data['fields'])) {
     foreach ($data['fields'] as $key => $field) {
 
@@ -491,7 +497,7 @@ function _bundle_copy_bundle_info($entity_type, $table_select = FALSE) {
 }
 
 /**
- * Creates export data
+ * Creates export data.
  *
  * @param $entity_type
  *   The name of the entity_type
@@ -543,8 +549,8 @@ function _bundle_copy_export_data($entity_type, $selected_data) {
           unset($field_instances[$fkey]['id']);
           unset($field_instances[$fkey]['field_id']);
           $instances[$fkey][] = $field_instances[$fkey];
-        }    
-        //Field Collection Export data
+        }
+        // Field Collection Export data.
         if ($fields[$fkey]['type'] == 'field_collection' && $fields[$fkey]['module'] == 'field_collection') {
           $fc_fields = _bc_copy_field_collection_export($fields, $fields[$fkey]['field_name']);
           foreach ($fc_fields as $fc_fkey => $fc_finfo) {
@@ -583,16 +589,16 @@ function _bundle_copy_export_data($entity_type, $selected_data) {
  *   The name of the field Collection field.
  */
 function _bc_copy_field_collection_export($fields, $fcfield) {
-  
+
   $fc_fields_data = array();
   $fc_field_instances = field_info_instances('field_collection_item', $fcfield);
   foreach ($fc_field_instances as $fc_fkey => $fc_finfo) {
-    
+
     unset($fc_field_instances[$fc_fkey]['id']);
     unset($fc_field_instances[$fc_fkey]['field_id']);
     $fc_fields_data[$fc_fkey]['instance'] = $fc_field_instances[$fc_fkey];
     if ($fields[$fc_fkey]['type'] == 'field_collection' && $fields[$fc_fkey]['module'] == 'field_collection') {
-      
+
       $fc_fields_fc_fields_data = _bc_copy_field_collection_export($fields, $fields[$fc_fkey]['field_name']);
       $fc_fields_data = array_merge($fc_fields_data, $fc_fields_fc_fields_data);
     }
@@ -643,7 +649,7 @@ function _bc_bundle_save_ignore($bundle) {
 /**
  * Menu callback: present the clone page.
  */
-function bundle_copy_clone($form, &$form_state, $entity_type = 'node' , $bname_validate = 'node_type_load') {
+function bundle_copy_clone($form, &$form_state, $entity_type = 'node', $bname_validate = 'node_type_load') {
 
   $bundles = _bundle_copy_bundle_info($entity_type, FALSE);
   $form['bundle'] = array(
@@ -651,7 +657,7 @@ function bundle_copy_clone($form, &$form_state, $entity_type = 'node' , $bname_v
     '#type' => 'select',
     '#options' => $bundles,
     '#default_value' => '',
-      '#description' => t('Select the <em>%btype</em> which you want to clone.', array('%btype' => ucfirst($entity_type))),
+    '#description' => t('Select the <em>%btype</em> which you want to clone.', array('%btype' => ucfirst($entity_type))),
   );
   $form['name'] = array(
     '#title' => t('New Bundle Name'),
@@ -666,20 +672,20 @@ function bundle_copy_clone($form, &$form_state, $entity_type = 'node' , $bname_v
     '#machine_name' => array(
       'exists' => $bname_validate,
     ),
-    '#description' => t('A unique machine-readable name for this %btype. It must only contain lowercase letters, numbers, and underscores. This name will be used for constructing the URL of the %node-add page, in which underscores will be converted into hyphens.', array('%node-add' => t('Add new content'),'%btype' => ucfirst($entity_type))),
-  );   
+    '#description' => t('A unique machine-readable name for this %btype. It must only contain lowercase letters, numbers, and underscores. This name will be used for constructing the URL of the %node-add page, in which underscores will be converted into hyphens.', array('%node-add' => t('Add new content'), '%btype' => ucfirst($entity_type))),
+  );
   $form['next'] = array(
     '#type' => 'submit',
     '#value' => t('Clone'),
   );
-  $form_state['storage']['entity_type'] =  $entity_type;
+  $form_state['storage']['entity_type'] = $entity_type;
   return $form;
 }
 /**
  * Submit callback: Clone data.
  */
 function bundle_copy_clone_submit($form, &$form_state) {
-  
+
   $src_btype = $form_state['values']['bundle'];
   $new_bname = $form_state['values']['name'];
   $new_btype = $form_state['values']['type'];
@@ -691,13 +697,13 @@ function bundle_copy_clone_submit($form, &$form_state) {
     $bundle_save_callback = $bc_info[$entity_type]['bundle_save_callback'];
 
     $new_bundle = $bundle_export_callback($src_btype);
-   
+
     $new_bundle->type = $new_bundle->orig_type = $new_btype;
     $new_bundle->name = $new_bname;
     $new_bundle->custom = 1;
 
     $bundle_status = $bundle_save_callback($new_bundle);
-    
+
     $new_fields = field_info_instances($entity_type, $src_btype);
     foreach ($new_fields as $key => $value) {
       $new_fields[$key]['bundle'] = $new_btype;
