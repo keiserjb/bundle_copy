@@ -28,6 +28,7 @@ function bundle_copy_bundle_copy_info() {
     'bundle_export_callback' => 'node_type_get_type',
     'bundle_save_callback' => 'node_type_save',
     'bundle_clone_name_validate' => 'node_type_load',
+    'bundle_name_validate' => 'node_type_load',
     'export_menu' => array(
       'path' => 'admin/structure/types/export',
       'access arguments' => 'administer content types',
@@ -45,6 +46,7 @@ function bundle_copy_bundle_copy_info() {
   $info['user'] = array(
     'bundle_export_callback' => '_bc_bundle_export_ignore',
     'bundle_save_callback' => '_bc_bundle_save_ignore',
+    'bundle_name_validate' => '',
     'export_menu' => array(
       'path' => 'admin/config/people/accounts/export',
       'access arguments' => 'administer users',
@@ -59,6 +61,7 @@ function bundle_copy_bundle_copy_info() {
     $info['taxonomy_term'] = array(
       'bundle_export_callback' => '_bc_copy_taxonomy_load',
       'bundle_save_callback' => '_bc_copy_taxonomy_save',
+      'bundle_name_validate' => 'taxonomy_vocabulary_machine_name_load',
       'export_menu' => array(
         'path' => 'admin/structure/taxonomy/export',
         'access arguments' => 'administer taxonomy',
@@ -328,12 +331,34 @@ function bundle_copy_import_submit($form, &$form_state) {
       if (!empty($entity_type)) {
         $existing_bundles = _bundle_copy_bundle_info($entity_type);
         $bundle_save_callback = $bc_info[$entity_type]['bundle_save_callback'];
-        $bundle_info = $bundle_save_callback($bundle);
-        if (!isset($existing_bundles[$key])) {
-          drupal_set_message(t('%bundle bundle has been created.', array('%bundle' => $bundle->name)));
-        }
-        else {
-          drupal_set_message(t('%bundle bundle has been updated.', array('%bundle' => $bundle->name)));
+        //Validate a bundle name
+        $bundle_name_validate = $bc_info[$entity_type]['bundle_name_validate'];
+        $bundle_name = $bundle->type ? $bundle->type : $bundle->machine_name;
+        $content_name = $bundle->name;
+        $is_type_exist = in_array($content_name, $existing_bundles);
+        $machine_name = preg_replace('@[^a-z0-9]+@','_', strtolower($bundle_name));
+        if ($bundle_name === $machine_name) {
+          if (!isset($existing_bundles[$bundle_name])) {
+              if ($is_type_exist) {
+                  drupal_set_message(t('The human-readable name %bundle is already taken', array('%bundle' => $bundle->name)));
+                   return;
+              } else {
+                  $bundle_info = $bundle_save_callback($bundle);
+                  drupal_set_message(t('%bundle bundle has been created.', array('%bundle' => $bundle->name)));
+              }
+          } else {
+              $orignal_name = node_type_load($bundle_name);
+                if ($is_type_exist && $content_name != $orignal_name->name){
+                  drupal_set_message(t('The human-readable name %bundle is already taken', array('%bundle' => $bundle->name)));
+                  return;
+                } else {
+                  $bundle_info = $bundle_save_callback($bundle);
+                  drupal_set_message(t('%bundle bundle has been updated.', array('%bundle' => $bundle->name)));
+                }
+            }
+        } else {
+          drupal_set_message('The machine-readable name must contain only lowercase letters, numbers, and underscores.');
+          return;
         }
       }
     }
