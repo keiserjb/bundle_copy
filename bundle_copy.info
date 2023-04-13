@@ -1,5 +1,5 @@
 name = Bundle Copy
 description = Import and exports bundles through the UI.
-core = 7.x
-dependencies[] = ctools
+backdrop = 1.x
+type = module
 package = Fields
